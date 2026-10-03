@@ -7,6 +7,8 @@ import {
   TrendingDown, TrendingUp, Wallet, X, Trash2, PiggyBank, CircleDollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase, supabaseConfigured, loadFinanceData, saveExpenseToCloud, deleteExpenseFromCloud, saveClosingToCloud } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,7 +26,6 @@ type Section = "dashboard" | "gastos" | "historico" | "analises" | "configuracoe
 type Expense = { id: string; amountCents: number; description: string; category: string; date: string; time: string; createdAt: string; };
 type Closing = { date: string; profitCents: number; updatedAt: string; };
 type Store = { expenses: Expense[]; closings: Closing[]; };
-const STORE_KEY = "escalie-financas-v1";
 const CATEGORIES = ["Alimentação", "Transporte", "Moradia", "Assinaturas", "Ferramentas e softwares", "Publicidade e anúncios", "Compras", "Saúde", "Lazer", "Outros"];
 const NAV: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -57,19 +58,17 @@ function parseMoney(value: string) {
 function amountInput(cents: number) {
   return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
 }
-function readStore(): Store {
-  if (typeof window === "undefined") return { expenses: [], closings: [] };
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return { expenses: [], closings: [] };
-    const parsed = JSON.parse(raw);
-    return { expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [], closings: Array.isArray(parsed.closings) ? parsed.closings : [] };
-  } catch { return { expenses: [], closings: [] }; }
-}
 function EscalieApp() {
   const [section, setSection] = useState<Section>("dashboard");
   const [store, setStore] = useState<Store>({ expenses: [], closings: [] });
   const [ready, setReady] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
   const [selectedDate, setSelectedDate] = useState(localDate());
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [closingOpen, setClosingOpen] = useState(false);
@@ -92,17 +91,56 @@ function EscalieApp() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  useEffect(() => { setStore(readStore()); setReady(true); }, []);
   useEffect(() => {
-    if (!ready) return;
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); }
-    catch { setToast("Não foi possível salvar os dados neste navegador."); }
-  }, [store, ready]);
+    if (!supabase) { setAuthReady(true); setReady(true); return; }
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) setAuthMessage(error.message);
+      setSession(data.session);
+      setAuthReady(true);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user.id || !supabase) {
+      setStore({ expenses: [], closings: [] });
+      setReady(Boolean(authReady && !session));
+      return;
+    }
+    let cancelled = false;
+    setReady(false);
+    loadFinanceData(session.user.id)
+      .then((data) => { if (!cancelled) setStore(data); })
+      .catch((error: unknown) => { if (!cancelled) setToast(error instanceof Error ? error.message : "Não foi possível carregar os dados."); })
+      .finally(() => { if (!cancelled) setReady(true); });
+    return () => { cancelled = true; };
+  }, [session?.user.id, authReady]);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  const signInOrUp = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!supabase) { setAuthMessage("Configure as variáveis de ambiente do backend."); return; }
+    if (!authEmail.trim() || authPassword.length < 6) { setAuthMessage("Informe um e-mail válido e uma senha com pelo menos 6 caracteres."); return; }
+    setAuthBusy(true); setAuthMessage("");
+    try {
+      const result = authMode === "signup"
+        ? await supabase.auth.signUp({ email: authEmail.trim(), password: authPassword })
+        : await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword });
+      if (result.error) throw result.error;
+      if (authMode === "signup" && !result.data.session) setAuthMessage("Cadastro iniciado. Confirme seu e-mail pelo link enviado para entrar.");
+      else setAuthMessage("Acesso confirmado.");
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : "Não foi possível autenticar. Tente novamente.");
+    } finally { setAuthBusy(false); }
+  };
 
   const expensesFor = useCallback((date: string) => store.expenses.filter(e => e.date === date), [store.expenses]);
   const closingFor = useCallback((date: string) => store.closings.find(c => c.date === date), [store.closings]);
@@ -121,8 +159,9 @@ function EscalieApp() {
     setExpenseTime(item?.time ?? localTime());
     setExpenseOpen(true);
   };
-  const saveExpense = (event: React.FormEvent) => {
+  const saveExpense = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!session?.user.id || !supabase) { setToast("Entre na sua conta para salvar."); return; }
     const cents = parseMoney(expenseAmount);
     if (!Number.isFinite(cents) || cents <= 0) { setToast("Informe um valor maior que zero."); return; }
     setSaving(true);
@@ -132,12 +171,16 @@ function EscalieApp() {
       amountCents: cents, description: expenseDescription.trim(), category: expenseCategory,
       date: expenseDate, time: expenseTime || localTime(), createdAt: editing?.createdAt ?? now,
     };
-    setStore(prev => ({ ...prev, expenses: editing ? prev.expenses.map(e => e.id === editing.id ? item : e) : [item, ...prev.expenses] }));
-    setSelectedDate(expenseDate);
-    setExpenseOpen(false);
-    setSaving(false);
-    setToast(editing ? "Gasto atualizado." : "Gasto salvo.");
-    setExpenseAmount(""); setExpenseDescription("");
+    try {
+      await saveExpenseToCloud(session.user.id, item);
+      setStore(prev => ({ ...prev, expenses: editing ? prev.expenses.map(e => e.id === editing.id ? item : e) : [item, ...prev.expenses] }));
+      setSelectedDate(expenseDate);
+      setExpenseOpen(false);
+      setToast(editing ? "Gasto atualizado." : "Gasto salvo na nuvem.");
+      setExpenseAmount(""); setExpenseDescription("");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Não foi possível salvar o gasto. Tente novamente.");
+    } finally { setSaving(false); }
   };
   const openClosing = (date = selectedDate) => {
     setClosingDate(date);
@@ -145,18 +188,29 @@ function EscalieApp() {
     setProfitInput(existing ? amountInput(existing.profitCents) : "");
     setClosingOpen(true);
   };
-  const saveClosing = (event: React.FormEvent) => {
+  const saveClosing = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!session?.user.id || !supabase) { setToast("Entre na sua conta para salvar."); return; }
     const cents = parseMoney(profitInput);
     if (!Number.isFinite(cents) || cents < 0) { setToast("Informe um lucro válido. O valor pode ser zero."); return; }
     setSaving(true);
     const item: Closing = { date: closingDate, profitCents: cents, updatedAt: new Date().toISOString() };
-    setStore(prev => ({ ...prev, closings: prev.closings.some(c => c.date === closingDate) ? prev.closings.map(c => c.date === closingDate ? item : c) : [...prev.closings, item] }));
-    setSelectedDate(closingDate); setClosingOpen(false); setSaving(false); setToast("Fechamento salvo.");
+    try {
+      await saveClosingToCloud(session.user.id, item);
+      setStore(prev => ({ ...prev, closings: prev.closings.some(c => c.date === closingDate) ? prev.closings.map(c => c.date === closingDate ? item : c) : [...prev.closings, item] }));
+      setSelectedDate(closingDate); setClosingOpen(false); setToast("Fechamento salvo na nuvem.");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Não foi possível salvar o fechamento.");
+    } finally { setSaving(false); }
   };
-  const deleteExpense = (id: string) => {
-    setStore(prev => ({ ...prev, expenses: prev.expenses.filter(e => e.id !== id) }));
-    setConfirmDelete(null); setToast("Gasto excluído.");
+  const deleteExpense = async (id: string) => {
+    try {
+      await deleteExpenseFromCloud(id);
+      setStore(prev => ({ ...prev, expenses: prev.expenses.filter(e => e.id !== id) }));
+      setConfirmDelete(null); setToast("Gasto excluído.");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Não foi possível excluir o gasto.");
+    }
   };
   const getDaily = (date: string) => {
     const spend = store.expenses.filter(e => e.date === date).reduce((s, e) => s + e.amountCents, 0);
@@ -193,6 +247,38 @@ function EscalieApp() {
   const statusLabel = (net: number | null) => net === null ? "Fechamento pendente" : net > 0 ? "Dia positivo" : net < 0 ? "Dia negativo" : "Dia equilibrado";
   const headerTitle = NAV.find(n => n.id === section)?.label ?? "Dashboard";
 
+  if (!authReady) return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Conectando ao Escalie Finanças…</div>;
+
+  if (!supabaseConfigured) return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-7 shadow-2xl sm:p-9">
+        <Brand />
+        <p className="eyebrow mt-8">Configuração necessária</p>
+        <h1 className="mt-2 text-2xl font-semibold">Conecte seu banco de dados<span className="text-primary">.</span></h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">A persistência está implementada, mas o projeto precisa das variáveis públicas VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY configuradas no ambiente do projeto. Nunca use a chave service_role no frontend.</p>
+        <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4 text-xs leading-5 text-muted-foreground">Execute também a migration supabase/migrations/20261003000000_create_finance_tables.sql no banco conectado para criar as tabelas e políticas de segurança.</div>
+      </div>
+    </div>
+  );
+
+  if (!session) return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-2xl sm:p-9">
+        <Brand />
+        <p className="eyebrow mt-8">{authMode === "login" ? "Bem-vindo de volta" : "Comece por aqui"}</p>
+        <h1 className="mt-2 text-2xl font-semibold">{authMode === "login" ? "Entre na sua conta" : "Crie sua conta"}<span className="text-primary">.</span></h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Seus dados financeiros ficam associados à sua conta e protegidos pelas regras de acesso do banco.</p>
+        <form onSubmit={signInOrUp} className="mt-6 space-y-4">
+          <label className="block text-xs font-semibold text-muted-foreground">E-mail<input type="email" autoComplete="email" required value={authEmail} onChange={e=>setAuthEmail(e.target.value)} className="field-input mt-2" placeholder="voce@exemplo.com"/></label>
+          <label className="block text-xs font-semibold text-muted-foreground">Senha<input type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={6} required value={authPassword} onChange={e=>setAuthPassword(e.target.value)} className="field-input mt-2" placeholder="Mínimo de 6 caracteres"/></label>
+          {authMessage && <p role="status" className="rounded-xl border border-border bg-secondary/50 p-3 text-xs leading-5 text-muted-foreground">{authMessage}</p>}
+          <button disabled={authBusy} className="h-11 w-full rounded-xl bg-primary text-sm font-semibold text-white disabled:opacity-60">{authBusy ? "Aguarde…" : authMode === "login" ? "Entrar" : "Criar conta"}</button>
+        </form>
+        <button onClick={()=>{setAuthMode(authMode==="login"?"signup":"login");setAuthMessage("");}} className="mt-4 w-full text-center text-xs font-semibold text-primary hover:text-primary-soft">{authMode === "login" ? "Ainda não tem conta? Criar conta" : "Já tem conta? Entrar"}</button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] flex-col border-r border-border bg-[#0b0a10] px-4 py-6 lg:flex">
@@ -207,7 +293,7 @@ function EscalieApp() {
         </div>
         <div className="mt-4 flex items-center gap-3 border-t border-border px-2 pt-4">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Wallet size={17} /></div>
-          <div><p className="text-sm font-semibold">Meu financeiro</p><p className="text-xs text-muted-foreground">Espaço pessoal</p></div>
+          <div className="min-w-0"><p className="truncate text-sm font-semibold">{session.user.email}</p><p className="text-xs text-muted-foreground">Espaço pessoal</p></div><button onClick={async()=>{await supabase?.auth.signOut();}} className="ml-auto rounded-lg p-2 text-xs text-muted-foreground hover:bg-accent" aria-label="Sair da conta">Sair</button>
           <button aria-label="Configurações" onClick={() => setSection("configuracoes")} className="ml-auto rounded-lg p-2 text-muted-foreground hover:bg-accent"><Ellipsis size={17} /></button>
         </div>
       </aside>
