@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  expense?: Expense;
-  defaultDate?: string;
+  expense?: Expense | undefined;
+  defaultDate?: string | undefined;
 }
 
 export function ExpenseSheet({ open, onOpenChange, expense, defaultDate }: Props) {

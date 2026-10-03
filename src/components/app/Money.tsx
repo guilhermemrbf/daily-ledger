@@ -24,5 +24,5 @@ export function Money({ cents, sign, className }: { cents: number; sign?: boolea
       from.current = cents;
     };
   }, [cents]);
-  return <span className={cn("num", className)}>{formatBRL(shown, { sign })}</span>;
+  return <span className={cn("num", className)}>{formatBRL(shown, { sign: !!sign })}</span>;
 }
