@@ -679,3 +679,15 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+
+## Backend e publicação
+
+O aplicativo usa Supabase/Lovable Cloud para autenticação e persistência financeira. Antes de usar:
+
+1. Configure `VITE_SUPABASE_URL` e uma chave pública (`VITE_SUPABASE_PUBLISHABLE_KEY` no Lovable Cloud ou `VITE_SUPABASE_ANON_KEY`).
+2. No SQL Editor do projeto Supabase/Lovable Cloud conectado, execute o arquivo `supabase/migrations/20261003000000_create_finance_tables.sql`.
+3. Em Authentication, configure a URL pública do app e as URLs de redirecionamento. Se a confirmação de e-mail estiver habilitada, confirme o e-mail após o cadastro.
+4. Faça deploy e teste cadastro, login, criação/edição/exclusão de gastos, fechamento diário e reabertura do app.
+
+A migration ativa Row Level Security e restringe cada linha ao usuário autenticado. Nunca coloque `service_role` ou qualquer chave secreta no frontend. O código do repositório não consegue aplicar a migration nem cadastrar variáveis no projeto hospedado sem acesso administrativo ao ambiente conectado.
