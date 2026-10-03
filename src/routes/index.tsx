@@ -266,7 +266,7 @@ function EscalieApp() {
 }
 
 function Brand({ compact = false }: { compact?: boolean }) {
-  return <div className="flex items-center gap-3"><img src="/financas-logo.svg" alt="Logo Finanças" className="size-10 shrink-0 rounded-xl object-cover" />{!compact && <div><p className="text-sm font-bold tracking-tight">Finanças</p><p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[.19em] text-muted-foreground">Controle diário</p></div>}</div>;
+  return <div className="flex items-center gap-3"><img src="/financas-logo.webp" alt="Logo Finanças" className="size-10 shrink-0 rounded-xl object-cover" />{!compact && <div><p className="text-sm font-bold tracking-tight">Finanças</p><p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[.19em] text-muted-foreground">Controle diário</p></div>}</div>;
 }
 function NavButton({ item, active, onClick }: { item: {id: Section;label:string;icon:typeof LayoutDashboard};active:boolean;onClick:()=>void }) {
   const Icon=item.icon;
