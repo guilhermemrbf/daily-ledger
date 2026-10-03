@@ -171,3 +171,35 @@
 @utility animate-value {
   animation: value-pop 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
+
+.field-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  background: #100e16;
+  padding: 0.7rem 0.85rem;
+  color: var(--color-foreground);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+.field-input::placeholder { color: var(--color-muted-foreground); }
+.field-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px oklch(0.606 0.219 293 / 16%);
+}
+.field-input:disabled { opacity: 0.6; cursor: not-allowed; }
+input[type="date"], input[type="time"] { color-scheme: dark; }
+button { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
