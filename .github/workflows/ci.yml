@@ -1,0 +1,24 @@
+name: Validar aplicativo
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+      - name: Validar build
+        run: bun run build
+      - name: Executar testes
+        run: bun run test
