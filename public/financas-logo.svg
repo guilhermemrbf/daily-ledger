@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="45%" r="72%"><stop stop-color="#130a27"/><stop offset="1" stop-color="#030307"/></radialGradient>
+  <linearGradient id="ring" x1="85" y1="75" x2="420" y2="445" gradientUnits="userSpaceOnUse"><stop stop-color="#f4d5ff"/><stop offset=".22" stop-color="#a855f7"/><stop offset=".55" stop-color="#6500ff"/><stop offset=".8" stop-color="#f0abfc"/><stop offset="1" stop-color="#6500ff"/></linearGradient>
+  <linearGradient id="body" x1="190" y1="180" x2="340" y2="340" gradientUnits="userSpaceOnUse"><stop stop-color="#e9d5ff"/><stop offset=".2" stop-color="#38304a"/><stop offset=".58" stop-color="#090810"/><stop offset=".8" stop-color="#191126"/><stop offset="1" stop-color="#050408"/></linearGradient>
+  <linearGradient id="purple" x1="260" y1="100" x2="380" y2="260" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset=".24" stop-color="#e9b7ff"/><stop offset=".55" stop-color="#a020ff"/><stop offset="1" stop-color="#4b00df"/></linearGradient>
+  <linearGradient id="flame" x1="260" y1="330" x2="260" y2="465" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset=".22" stop-color="#e7b3ff"/><stop offset=".58" stop-color="#9b20ff"/><stop offset="1" stop-color="#4b00d6" stop-opacity="0"/></linearGradient>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
+</defs>
+<rect width="512" height="512" rx="100" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="205" stroke="#7800ff" stroke-width="16" opacity=".28" filter="url(#glow)"/>
+<circle cx="256" cy="256" r="201" stroke="url(#ring)" stroke-width="4"/>
+<circle cx="256" cy="256" r="178" stroke="#6b16dc" stroke-width="1.5" opacity=".7"/>
+<path d="M194 288C151 307 126 344 111 388C153 372 188 352 213 320Z" fill="url(#purple)" stroke="#d9a7ff" stroke-width="2"/>
+<path d="M300 304C302 352 327 383 363 405C361 361 350 326 326 296Z" fill="url(#purple)" stroke="#bd6bff" stroke-width="2"/>
+<path d="M225 335C214 377 202 410 180 447C222 427 251 395 266 355Z" fill="url(#flame)" opacity=".95"/>
+<path d="M247 343C246 385 259 416 281 450C299 410 300 378 283 340Z" fill="url(#flame)"/>
+<path d="M269 347C282 383 306 408 333 424C328 385 312 357 290 335Z" fill="url(#flame)" opacity=".75"/>
+<path d="M176 330C187 249 232 162 327 91C343 80 365 69 386 64C386 87 380 113 370 134C327 234 261 294 201 330Z" fill="url(#body)" stroke="#c98aff" stroke-width="3"/>
+<path d="M327 91C343 80 365 69 386 64C386 87 380 113 370 134L327 91Z" fill="url(#purple)" stroke="#f3d4ff" stroke-width="2"/>
+<path d="M177 329L160 344L188 349L201 330" fill="#5d19b7" stroke="#d7a3ff" stroke-width="2"/>
+<path d="M195 327L211 340L226 329" stroke="#8d35ec" stroke-width="3"/>
+<circle cx="302" cy="180" r="35" fill="#05030b" stroke="#d7b4ff" stroke-width="5"/>
+<circle cx="302" cy="180" r="27" stroke="#8d20ff" stroke-width="5"/>
+<circle cx="302" cy="180" r="19" stroke="#4b00bf" stroke-width="2"/>
+<path d="M225 282C246 248 263 224 284 209C277 237 258 267 234 293Z" fill="url(#purple)" stroke="#e2b4ff" stroke-width="2"/>
+<path d="M191 326L219 339M184 335L211 348" stroke="#6d24b5" stroke-width="3"/>
+<ellipse cx="255" cy="427" rx="86" ry="18" fill="#7600ff" opacity=".22" filter="url(#glow)"/>
+</svg>
