@@ -2,9 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, Check,
-  ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clock3, Download,
-  Ellipsis, FileClock, Filter, LayoutDashboard, ListFilter, Menu, Minus,
-  MoreHorizontal, Pencil, Plus, Receipt, Search, Settings2, Sparkles,
+  ChevronRight, Clock3, Download, Ellipsis, FileClock, Filter, LayoutDashboard,
+  Menu, Minus, Pencil, Plus, Receipt, Search, Settings2, Sparkles,
   TrendingDown, TrendingUp, Wallet, X, Trash2, PiggyBank, CircleDollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
